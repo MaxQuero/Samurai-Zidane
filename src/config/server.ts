@@ -14,18 +14,19 @@ export default class Server {
         this.app = express();
         let server = this.app.listen(this.port, () =>  {
             console.log('Serveur démarré');
-
         });
-        const io = require('socket.io').listen(server);
+        const io = require('socket.io').listen(server, {transports: ['websocket'], upgrade: false});
         this.socket(io);
         return this.app;
     }
 
 
     private socket(io: any) {
+        let client : Array<any> = [];
         let players: Array<any>= [];
 
         io.sockets.on('connection', (socket: any) => {
+            if (players.length === 2) { return }
             console.log(io.engine.clientsCount);
 
             console.log('connected to socket.io');
@@ -50,13 +51,16 @@ export default class Server {
                     if(players.length < 2) {
                         players.push({ user: user, ready: false});
                     } else {
-                        players[0] = players[1];
-                        players[1] = { user: user, ready: false};
+                        players.shift();
+                        players.push({ user: user, ready: false});
                     }
                     newUser = players.find(el => el.user === user);
 
                 }
-                console.log('newplay', players);
+                console.log('players', players);
+                console.log('newplay', players.indexOf(newUser));
+                socket.broadcast.emit('player', players.indexOf(newUser));
+
                 socket.emit('player', players.indexOf(newUser));
             });
 
@@ -82,12 +86,11 @@ export default class Server {
                     }
 
                 }
+            });
 
 
-
-                socket.on('disconnect', () => {
-                    console.log('disconnected');
-                })
+            socket.on('disconnect', function() {
+                console.log('Got disconnect!');
             });
         });
 

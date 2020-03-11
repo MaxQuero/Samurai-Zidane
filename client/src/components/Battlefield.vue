@@ -44,6 +44,7 @@
 
                 this.socket = io('http://localhost:4000', {transports: ['websocket'], upgrade: false});
                 this.socket.emit('newPlayer', this.user);
+                console.log(this.socket.id);
 
         },
         methods: {
@@ -155,7 +156,8 @@
                 }.bind(this));*/
                 console.log('ici');
             }
-        }
+
+        },
     }
 </script>
 
