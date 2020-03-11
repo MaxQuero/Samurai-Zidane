@@ -1,73 +1,90 @@
 import * as express from 'express'
 import passport from "passport";
 const router = express.Router();
-const User = require ('../models/User');
+let User = require("../models/User");
 
 router.get('/', function (req, res) {
-    res.render('index', { user : req.user });
+    res.json('success');
 });
 
 router.get('/register', function(req, res) {
     if ( req.session && req.session.passport && req.session.passport.user != null ) {
-        res.redirect('/');
+        res.json('success');
     } else {
-        res.render('auth', {
-            title: 'bonsoir'
+        res.json({
         });
-
     }
 
 });
 
 router.post('/register', function(req, res, next) {
-    User.register(new User({ username : req.body.username }), req.body.password, function(err: Error, user : any) {
-        if (err) {
-            return res.render('register', { error : err.message });
-        }
-
-        passport.authenticate('local')(req, res, function () {
-            if( req.session) {
-                req.session.save(function (err) {
-                    if (err) {
-                        return next(err);
-                    }
-                    res.redirect('/');
+    User.register(new User({
+            username: req.body.username
+        }),
+        req.body.password, (err: any, user: any) => {
+            if (err) {
+                res.statusCode = 500;
+                res.setHeader('Content-Type', 'application/json');
+                res.json({
+                    err: err
                 });
+            } else {
+                passport.authenticate('local')(req, res, () => {
+                    User.findOne({
+                        username: req.body.username
+                    }, (err:any , person: any) => {
+                        res.statusCode = 200;
+                        res.setHeader('Content-Type', 'application/json');
+                        res.json({
+                            user: req.session,
+                            success: true,
+                            status: 'Registration Successful!',
+                        });
+                    });
+                })
             }
-
-        });
-    });
+        })
 });
 
 router.get('/login', function(req, res) {
     if ( req.session && req.session.passport && req.session.passport.user != null ) {
-        res.redirect('/');
+        //res.redirect('/');
+        res.json(req.session)
     } else {
-        res.render('login', {
-            user : req.user,
-            title : 'Sign-in',
-            subTitle : 'Come back please !'
+        res.json(req.session);
+    }
+});
+
+router.post('/login', passport.authenticate('local'), (req, res) => {
+    User.findOne({
+        username: req.body.username
+    }, (err: any, person: any) => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json({
+            user: req.body.username,
+            success: true,
         });
-    }
+    })
 });
 
-router.post('/login', passport.authenticate('local'), function(req, res) {
-    if ( req.session && req.session.passport && req.session.passport.user != null ) {
-        res.redirect('/');
-    } else {
-        res.redirect('/register');
-    }
-});
-
-router.get('/logout', function(req, res) {
-    if ( req.session && req.session.passport && req.session.passport.user != null ) {
+router.get('/logout', (req, res, next) => {
+    if (req.session) {
         req.logout();
-        res.redirect('/');
-    }
-    else {
-        res.redirect('/')
+        req.session.destroy((err) => {
+            if (err) {
+                console.log(err);
+            } else {
+                res.clearCookie('session-id');
+                res.json({
+                    message: 'You are successfully logged out!'
+                });
+            }
+        });
+    } else {
+        var err = new Error('You are not logged in!');
+        next(err);
     }
 });
-
 
 export default router;

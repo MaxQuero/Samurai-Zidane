@@ -4,22 +4,21 @@ import bodyParser from "body-parser";
 import passport from "passport"
 import session from "express-session";
 import cors from 'cors';
-let LocalStrategy = require('passport-local');
-
+var LocalStrategy = require('passport-local').Strategy;
  class App {
     app: any;
     constructor() {
         this.app = new Server(4000);
         this.app = this.app.start();
+        this.app.use(cors());
         this.app.use(bodyParser.json());
         this.app.use(bodyParser.urlencoded({extended: true}));
         this.app.use(session({
-            secret: 'zizou',
-            resave: false,
-            saveUninitialized: true,
-            cookie: { secure: true }
+            name: 'session-id',
+            secret: '123-456-789',
+            saveUninitialized: false,
+            resave: false
         }));
-        this.app.use(cors());
         this.passportSession();
 
         this.loadRoutes();

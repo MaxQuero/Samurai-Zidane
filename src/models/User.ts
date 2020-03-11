@@ -1,14 +1,19 @@
 import passport from "passport"
 import mongoose from "mongoose";
 import passportLocalMongoose from "passport-local-mongoose";
+mongoose.connect('mongodb://localhost/samuraiZidane');
 
 const Schema = mongoose.Schema;
 
-const User = new Schema({
-    username: String,
-    password: String
+
+export type UserDocument = mongoose.Document & {
+    username: String
+};
+
+const userSchema = new Schema({
+    username: String
 });
 
-User.plugin(passportLocalMongoose);
+userSchema.plugin(passportLocalMongoose);
 
-module.exports = mongoose.model('User', User);
+module.exports = mongoose.model<UserDocument>("User", userSchema);
