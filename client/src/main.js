@@ -1,7 +1,6 @@
 import Vue from 'vue'
 import App from './App.vue'
 import VueRouter from 'vue-router'
-import Home from "./components/Home";
 import Battlefield from "./components/Battlefield";
 import Login from "./components/Login"
 import Register from "./components/Register";
@@ -12,7 +11,6 @@ const router = new VueRouter({
   routes: [
     {path: '/', component: Login, name: 'login'},
     {path: '/register', component: Register, name: 'register'},
-    { path: '/home', component:  Home, name: 'home'},
     { path: '/battlefield', component: Battlefield, name: 'battlefield' }
   ]
 });

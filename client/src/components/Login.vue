@@ -1,20 +1,20 @@
 <template>
-  <div class="login">
-    <form @submit.prevent="login">
-      <div>
+  <div class="form-wrapper">
+    <form class="form" @submit.prevent="login">
+      <div class="form-el">
         <label>Username:</label>
         <input type="text" name="username" v-model="form.username"/>
-        <br/>
+
       </div>
-      <div>
+      <div class="form-el">
         <label>Password:</label>
         <input type="password" name="password" v-model="form.password" />
       </div>
-      <div>
-        <input type="submit" value="Submit" />
+      <div class="buttons">
+        <input class="btn" type="submit" value="Submit" />
+        <router-link class="other-action" :to="{name: 'register'}">Register</router-link>
       </div>
     </form>
-    <router-link :to="{name: 'register'}">Register</router-link>
   </div>
 </template>
 

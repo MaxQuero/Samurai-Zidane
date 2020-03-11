@@ -1,14 +1,14 @@
 <template>
     <div class="background">
-        <div class="player">{{ user }} vous êtes le joueur {{player}}</div>
-        <div class="res" v-if="!ready || go">{{res}}</div>
+        <div class="complet res" v-if="res === 'complet'">{{res}}</div>
+        <div class="game" v-if="res !== 'complet'">
+        <div class="res" v-if="state === 'end' || state ==='hit'  || state === 'init'">{{res}}</div>
 
-        <div class="start" v-if="!ready || end" @click="startGame">Prêt à jouer</div>
-        <div class="battle-ready" v-if="!end">
+        <div class="battle-ready" v-if="state !== 'end'">
             <img class="player player1" src="../assets/zidane.png"/>
             <img class="player player2" src="../assets/matterazzi.png"/>
         </div>
-        <div class="scenarii" v-if="end">
+        <div class="scenarii" v-if="state === 'end'">
 
             <div class="player1-win" v-if="(player === 'Zidane' && res === 'Gagné') || (player ==='Materazzi' && res === 'Perdu')">
                 <img class="headbutt" src="../assets/headbutt.png"/>
@@ -18,22 +18,26 @@
                 <img class="player player2" src="../assets/ref.png"/>
             </div>
         </div>
+
+            <div class="btn start" v-if="state === 'init' ||  state === 'end'" @click="startGame">Prêt à jouer</div>
+            <div class="player" v-if="state !== 'end'">Vous êtes {{player}}</div>
+
+        </div>
+
     </div>
 </template>
 
 <script>
     import io from 'socket.io-client';
+    import Constants from "../shared/Constants";
 
     export default {
         name: "Battlefield",
         data() {
             return {
                 user: this.$route.params.user ? this.$route.params.user :  '',
-                started: false,
-                ready: false,
-                go :false,
-                socket: io('http://localhost:4000', {transports: ['websocket'], upgrade: false}),
-                end: false,
+                state: 'init',
+                socket: '',
                 res: null,
                 socketMessage: '',
                 player: ''
@@ -48,30 +52,15 @@
             },
 
             startGame() {
-                this.ready = true;
-                this.end = false;
-                this.started = false;
-                //tell socket we are ready
-                console.log(this.started);
+                this.state='ready';
                 this.socket.emit('ready', this.user);
-
-
             },
 
-            list() {
-                this.started = true;
-                if(this.started) {
-                    window.addEventListener("keydown", function listenr() {
-                        if (!this.go) {
-                            this.socket.emit('attack', 'false_start')
-                        } else {
-                            this.socket.emit('attack', 'win');
-                        }
-
-                        console.log(this.end);
-                        console.log('end listener');
-                        window.removeEventListener('keydown', listenr);
-                    }.bind(this));
+            keyAction() {
+                if (this.state !== 'hit') {
+                    this.socket.emit('attack', 'false_start')
+                } else {
+                    this.socket.emit('attack', 'win');
                 }
             }
 
@@ -81,79 +70,56 @@
             if(this.user === '') {
                 this.$router.push({name: 'login'});
             } else {
+                this.socket = io(Constants.BASE_URL, {transports: ['websocket'], upgrade: false});
                 this.socket.emit('newPlayer', this.user);
 
-            }
-            this.socket.on('player', (player) => {
-                if(player === 0) {
-                    this.player =  "Zidane";
-                } else {
-                    this.player =  "Materazzi";
-                }
-
-                console.log(this.player);
-            });
-
-            this.socket.on('win', () => {
-                this.res = "Gagné";
-                this.go = false;
-                console.log(this.player + ' zI win');
-                this.ready = false;
-                this.started = false;
-                this.end = true;
-
-            });
-            this.socket.on('lost', () => {
-                console.log(this.player + ' zI lost');
-                this.go = false;
-
-
-                this.res = "Perdu";
-                this.ready = false;
-                this.started = false;
-                this.end = true;
-            });
-
-            this.socket.on('false_start', () => {
-                console.log(this.player + ' zI false');
-                this.go = false;
-
-                this.res = "Perdu";
-                this.ready = false;
-
-                this.started = false;
-                this.end = true;
-
-            });
-
-            this.socket.on('readyAll', () => {
-                console.log('readyAll');
-                this.list();
-
-            });
-
-            this.socket.on('go', () => {
-                this.go = true;
-                this.res = "!";
-            });
-
-            this.socket.on('disconnect', function () {
-                this.socket.disconnect();
-            });
-                /*window.addEventListener("touchend", function listenr() {
-                    if (!this.go) {
-                        this.socket.emit('attack', 'false_start')
+                this.socket.on('complet', () => {
+                    this.res = "complet";
+                    this.socket.disconnect();
+                });
+                this.socket.on('player', (player) => {
+                    if (player === 0) {
+                        this.player = "Zidane";
                     } else {
-                        this.socket.emit('attack', 'win');
+                        this.player = "Materazzi";
                     }
 
-                    if (this.end) {
-                        window.removeEventListener('keydown', listenr);
+                    console.log(this.player);
+                });
 
+                this.socket.on('result', (res) => {
+                    this.state='end';
+                    window.removeEventListener('keydown', this.keyAction);
+                    window.removeEventListener("touchend", this.keyAction);
+
+                    if (res === 'win') {
+                        this.res = "Gagné";
+                    } else if (res === 'lost') {
+                        this.res = "Perdu";
+                    } else if (res === 'false_start') {
+                        this.res = "Perdu";
                     }
-                }.bind(this));*/
+
+                });
+
+                this.socket.on('readyAll', () => {
+                   this.state = 'start';
+                    window.addEventListener("keydown", this.keyAction);
+                    window.addEventListener("touchend", this.keyAction);
+                });
+
+                this.socket.on('go', () => {
+                    //in case of false start
+                    if(this.state !== 'end') {
+                        this.state = 'hit';
+                        this.res = "!";
+                    }
+                });
+
+
                 console.log('ici');
             }
+        }
 
     }
 </script>
@@ -164,28 +130,56 @@
     .player {
         width: 100%;
         color: white;
-        font-size: 3rem;
-        z-index: 999
+        font-size: 1.5rem;
+        z-index: 999;
+        text-align: center;
     }
-    .background {
+
+    .game {
+        width: 100%;
+        height: 100%;
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
         align-items: center;
         align-content: center;
+    }
+    .background {
         width: 100%;
         height: 100%;
         background-image: url('../assets/terrain.jpg');
         background-size: cover;
     }
 
-    .start, .res {
+    .start {
+        width: 30%;
+        margin: 4px;
+        padding: 8px;
+        font-size: 2.5rem;
+        text-align: center;
+        z-index: 999;
+        cursor: pointer;
+        margin: 12px;
 
+    }
+
+    .res {
         width: 100%;
         text-align: center;
         color: white;
-        font-size: 3rem;
+        font-size: 2.5rem;
         z-index: 999
+    }
+
+    .res {
+        display: flex;
+        justify-content: center;
+        position: absolute;
+        top: 150px;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        font-size: 5rem;
     }
 
     .scenarii, .win, .battle-ready {
@@ -200,24 +194,30 @@
     }
 
     .battle-ready .player1 {
-        width: 150px;
+        width: 100px;
     }
 
     .battle-ready .player2 {
-        width: 210px;
+        width: 160px;
     }
 
     .scenarii {
         justify-content: center;
     }
 
+
+    .scenarii .player1-win .headbutt {
+        width: 400px;
+
+    }
     .scenarii .player2-win .player1 {
-        width: 150px;
-        height: 300px;
+        width: 100px;
+        height: 250px;
     }
 
     .scenarii .player2-win .player2 {
-        width: 150px;
+        width: 100px;
     }
+
 
 </style>
