@@ -28,11 +28,11 @@
         name: "Battlefield",
         data() {
             return {
-                user: this.$route.params.user ? this.$route.params.user :  '',
+                user: this.$route.params.user ? this.$route.params.user : '',
                 started: false,
                 ready: false,
                 go :false,
-                socket: io('http://localhost:4000', {transports: ['websocket'], upgrade: false}),
+                socket: '',
                 end: false,
                 res: null,
                 socketMessage: '',
@@ -40,6 +40,10 @@
             }
         },
         created() {
+                this.user = Math.random();
+
+                this.socket = io('http://localhost:4000', {transports: ['websocket'], upgrade: false});
+                this.socket.emit('newPlayer', this.user);
 
         },
         methods: {
@@ -58,88 +62,85 @@
 
             },
 
-            list() {
-                this.started = true;
-                if(this.started) {
-                    window.addEventListener("keydown", function listenr() {
-                        if (!this.go) {
-                            this.socket.emit('attack', 'false_start')
-                        } else {
-                            this.socket.emit('attack', 'win');
-                        }
-
-                        console.log(this.end);
-                        console.log('end listener');
-                        window.removeEventListener('keydown', listenr);
-                    }.bind(this));
+            actionKeyEvent() {
+                if (!this.go) {
+                    this.socket.emit('attack', 'false_start')
+                } else {
+                    this.socket.emit('attack', 'win');
                 }
+
+                console.log(this.end);
+                console.log('end listener');
+                window.removeEventListener('keydown', this)
+
             }
+
 
         },
         mounted() {
 
-            if(this.user === '') {
-                this.$router.push({name: 'login'});
-            } else {
-                this.socket.emit('newPlayer', this.user);
+            if (this.socket) {
+                this.socket.on('player', (player) => {
+                    if (player === 0) {
+                        this.player = "Zidane";
+                    } else {
+                        this.player = "Materazzi";
+                    }
 
-            }
-            this.socket.on('player', (player) => {
-                if(player === 0) {
-                    this.player =  "Zidane";
-                } else {
-                    this.player =  "Materazzi";
-                }
+                    console.log(this.player);
+                });
 
-                console.log(this.player);
-            });
+                this.socket.on('win', () => {
+                    this.res = "Gagné";
+                    this.go = false;
+                    console.log(this.player + ' zI win');
+                    this.ready = false;
+                    this.started = false;
+                    this.end = true;
 
-            this.socket.on('win', () => {
-                this.res = "Gagné";
-                this.go = false;
-                console.log(this.player + ' zI win');
-                this.ready = false;
-                this.started = false;
-                this.end = true;
-
-            });
-            this.socket.on('lost', () => {
-                console.log(this.player + ' zI lost');
-                this.go = false;
+                });
+                this.socket.on('lost', () => {
+                    console.log(this.player + ' zI lost');
+                    this.go = false;
 
 
-                this.res = "Perdu";
-                this.ready = false;
-                this.started = false;
-                this.end = true;
-            });
+                    this.res = "Perdu";
+                    this.ready = false;
+                    this.started = false;
+                    this.end = true;
+                });
 
-            this.socket.on('false_start', () => {
-                console.log(this.player + ' zI false');
-                this.go = false;
+                this.socket.on('false_start', () => {
+                    console.log(this.player + ' zI false');
+                    this.go = false;
 
-                this.res = "Perdu";
-                this.ready = false;
+                    this.res = "Perdu";
+                    this.ready = false;
 
-                this.started = false;
-                this.end = true;
+                    this.started = false;
+                    this.end = true;
 
-            });
+                });
 
-            this.socket.on('readyAll', () => {
-                console.log('readyAll');
-                this.list();
+                this.socket.on('readyAll', () => {
+                    console.log('readyAll');
+                    this.started = true;
+                    if(this.started) {
 
-            });
+                        window.addEventListener("keydown", this.actionKeyEvent);
+                    }
+                    this.started= false;
 
-            this.socket.on('go', () => {
-                this.go = true;
-                this.res = "!";
-            });
+                });
 
-            this.socket.on('disconnect', function () {
-                this.socket.disconnect();
-            });
+                this.socket.on('go', () => {
+                    this.go = true;
+                    this.res = "!";
+                });
+
+                this.socket.on('disconnect', function () {
+                    this.socket.disconnect();
+                });
                 /*window.addEventListener("touchend", function listenr() {
                     if (!this.go) {
                         this.socket.emit('attack', 'false_start')
@@ -154,7 +155,7 @@
                 }.bind(this));*/
                 console.log('ici');
             }
-
+        }
     }
 </script>
 

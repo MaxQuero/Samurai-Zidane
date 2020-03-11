@@ -18,15 +18,12 @@ export default class Server {
         });
         const io = require('socket.io').listen(server);
         this.socket(io);
-        console.log('scoket');
         return this.app;
     }
 
 
     private socket(io: any) {
         let players: Array<any>= [];
-        let userReady: any = {};
-
 
         io.sockets.on('connection', (socket: any) => {
             console.log(io.engine.clientsCount);
